@@ -31,6 +31,8 @@ COURSE_NOTIFICATION_TYPES = {
         'is_core': True,
         'content_template': _('<{p}><{strong}>{replier_name}</{strong}> commented on <{strong}>{author_name}'
                               '</{strong}> response to your post <{strong}>{post_title}</{strong}></{p}>'),
+        'grouped_content_template': _('<{p}><{strong}>{replier_name}</{strong}> commented on <{strong}>{author_name}'
+                                      '</{strong}> response to your post <{strong}>{post_title}</{strong}></{p}>'),
         'content_context': {
             'post_title': 'Post title',
             'author_name': 'author name',
@@ -457,19 +459,43 @@ class NotificationAppManager:
         return course_notification_preference_config
 
 
+def get_grouped_template_context(template, context):
+    if not context.get('grouped', False):
+        return ''
+    user_key = context.get('user_key')
+    group_key = context.get('group_key')
+    user_list = context[group_key]
+    grouped_count = context['grouped_count']
+    text = " and ".join(user_list) if grouped_count == 2 else f"{user_list[0]} and {grouped_count - 1} others"
+    new_context = context.copy()
+    new_context.update({user_key: text})
+    return template.format(**new_context)
+
+
+def get_callback(notification_type):
+    try:
+        return globals()[f"modify_context_{notification_type}"]
+    except:
+        return None
+
+
 def get_notification_content(notification_type, context):
     """
     Returns notification content for the given notification type with provided context.
     """
-    html_tags_context = {
+    context.update({
         'strong': 'strong',
         'p': 'p',
-    }
+    })
     notification_type = NotificationTypeManager().notification_types.get(notification_type, None)
     if notification_type:
-        notification_type_content_template = notification_type.get('content_template', None)
+        is_grouped = context.get('grouped', False)
+        key = "grouped_content_template" if is_grouped else "content_template"
+        notification_type_content_template = notification_type.get(key, None)
         if notification_type_content_template:
-            return notification_type_content_template.format(**context, **html_tags_context)
+            if is_grouped:
+                return get_grouped_template_context(notification_type_content_template, context)
+            return notification_type_content_template.format(**context)
     return ''
 
 

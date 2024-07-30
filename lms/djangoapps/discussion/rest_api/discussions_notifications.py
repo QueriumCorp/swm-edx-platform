@@ -133,6 +133,7 @@ class DiscussionNotificationSender:
             )
             context = {
                 "author_name": str(author_name),
+                "group_by_id": self.parent_response.id
             }
             self._send_notification([self.thread.user_id], "new_comment", extra_context=context)
 
