@@ -124,7 +124,7 @@ sites)::
   ./manage.py lms collectstatic
   ./manage.py cms collectstatic
 
-Setup Studio SSO for Development::
+Set up CMS SSO for Development::
 
   ./manage.py lms manage_user studio_worker example@example.com --unusable-password
   # DO NOT DO THIS IN PRODUCTION it will make your auth insecure
