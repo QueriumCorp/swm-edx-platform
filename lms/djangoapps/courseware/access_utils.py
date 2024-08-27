@@ -27,7 +27,7 @@ from common.djangoapps.student.roles import CourseBetaTesterRole
 from xmodule.util.xmodule_django import get_current_request_hostname  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.course_module import COURSE_VISIBILITY_PUBLIC  # lint-amnesty, pylint: disable=wrong-import-order
 
-DEBUG_ACCESS = False
+DEBUG_ACCESS = True
 log = getLogger(__name__)
 
 ACCESS_GRANTED = AccessResponse(True)
