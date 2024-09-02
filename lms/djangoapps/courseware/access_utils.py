@@ -28,7 +28,7 @@ from openedx.features.course_experience import COURSE_ENABLE_UNENROLLED_ACCESS_F
 from xmodule.course_block import COURSE_VISIBILITY_PUBLIC  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.util.xmodule_django import get_current_request_hostname  # lint-amnesty, pylint: disable=wrong-import-order
 
-DEBUG_ACCESS = False
+DEBUG_ACCESS = True
 log = getLogger(__name__)
 
 ACCESS_GRANTED = AccessResponse(True)
