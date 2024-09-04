@@ -88,6 +88,7 @@ def enterprise_learner_enrolled(request, user, course_key):
     from openedx.features.enterprise_support.api import enterprise_customer_from_session_or_learner_data
 
     if not user.is_authenticated:
+        debug("access_utils: enterprise_learner_enrolled user.is_authenticated=False course_key=%s",course_key)
         return False
 
     # enterprise_customer_data is either None (if learner is not linked to any customer) or a serialized
@@ -95,6 +96,7 @@ def enterprise_learner_enrolled(request, user, course_key):
     enterprise_customer_data = enterprise_customer_from_session_or_learner_data(request)
     learner_portal_enabled = enterprise_customer_data and enterprise_customer_data['enable_learner_portal']
     if not learner_portal_enabled:
+        debug("access_utils: enterprise_learner_enrolled learner_portal_enabled=False course_key=%s",course_key)
         return False
 
     # Additionally make sure the enterprise learner is actually enrolled in the requested course, subsidized
@@ -116,6 +118,7 @@ def enterprise_learner_enrolled(request, user, course_key):
         enterprise_customer_data['uuid'],
         enterprise_enrollment_exists,
     )
+    debug("access_utils: enterprise_learner_enrolled enterprise_enrollment_exists=%s",enterprise_enrollment_exists)
     return enterprise_enrollment_exists
 
 
