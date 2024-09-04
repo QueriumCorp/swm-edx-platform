@@ -134,9 +134,11 @@ def check_start_date(user, days_early_for_beta, start, course_key, display_error
     masquerading_as_student = is_masquerading_as_student(user, course_key)
 
     if start_dates_disabled and not masquerading_as_student:
+        debug("access_util: GRANTED check_start_date disabled for %s", course_key)
         return ACCESS_GRANTED
     else:
         if start is None or in_preview_mode() or get_course_masquerade(user, course_key):
+            debug("access_util: GRANTED check_start_date other for %s", course_key)
             return ACCESS_GRANTED
 
         if now is None:
@@ -145,14 +147,17 @@ def check_start_date(user, days_early_for_beta, start, course_key, display_error
 
         should_grant_access = now > effective_start
         if should_grant_access:
+            debug("access_util: GRANTED check_start_date should grant access for %s", course_key)
             return ACCESS_GRANTED
 
         # Before returning a StartDateError, determine if the learner should be redirected to the enterprise learner
         # portal by returning StartDateEnterpriseLearnerError instead.
         request = get_current_request()
         if request and enterprise_learner_enrolled(request, user, course_key):
+            debug("access_util: check_start_date StartDateEnterpriseLearner for %s", course_key)
             return StartDateEnterpriseLearnerError(start, display_error_to_user=display_error_to_user)
 
+        debug("access_util: check_start_date StartDateError for %s", course_key)
         return StartDateError(start, display_error_to_user=display_error_to_user)
 
 
@@ -162,6 +167,7 @@ def in_preview_mode():
     """
     hostname = get_current_request_hostname()
     preview_lms_base = settings.FEATURES.get('PREVIEW_LMS_BASE', None)
+    debug("access_util: in_preview_mode StartDateError preview_lms_base=%s", preview_lms_base)
     return bool(preview_lms_base and hostname and hostname.split(':')[0] == preview_lms_base.split(':')[0])
 
 
@@ -173,7 +179,9 @@ def check_course_open_for_learner(user, course):
         AccessResponse: Either ACCESS_GRANTED or StartDateError.
     """
     if COURSE_PRE_START_ACCESS_FLAG.is_enabled():
+        debug("access_util: GRANTED check_course_open_for_learner StartDateError course=%s", course)
         return ACCESS_GRANTED
+    debug("access_util: check_course_open_for_learner check_start_date course=%s", course)
     return check_start_date(user, course.days_early_for_beta, course.start, course.id)
 
 
@@ -185,11 +193,14 @@ def check_enrollment(user, course):
         AccessResponse: Either ACCESS_GRANTED or EnrollmentRequiredAccessError.
     """
     if check_public_access(course, [COURSE_VISIBILITY_PUBLIC]):
+        debug("access_util: GRANTED check_enrollment check_public_access course=%s", course)
         return ACCESS_GRANTED
 
     if CourseEnrollment.is_enrolled(user, course.id):
+        debug("access_util: GRANTED check_enrollment is_enrolled course=%s", course)
         return ACCESS_GRANTED
 
+    debug("access_util: DENIED check_enrollment enrollment required course=%s", course)
     return EnrollmentRequiredAccessError()
 
 
@@ -201,11 +212,14 @@ def check_authentication(user, course):
         AccessResponse: Either ACCESS_GRANTED or AuthenticationRequiredAccessError
     """
     if user.is_authenticated:
+        debug("access_util: GRANTED check_authentication user.is_authenticated course=%s", course)
         return ACCESS_GRANTED
 
     if check_public_access(course, [COURSE_VISIBILITY_PUBLIC]):
+        debug("access_util: GRANTED check_authentication check_public_access course=%s", course)
         return ACCESS_GRANTED
 
+    debug("access_util: DENIED check_authentication authentication required course=%s", course)
     return AuthenticationRequiredAccessError()
 
 
@@ -226,8 +240,10 @@ def check_public_access(course, visibilities):
     unenrolled_access_flag = COURSE_ENABLE_UNENROLLED_ACCESS_FLAG.is_enabled(course.id)
     allow_access = unenrolled_access_flag and course.course_visibility in visibilities
     if allow_access:
+        debug("access_util: GRANTED check_public_access course=%s", course)
         return ACCESS_GRANTED
 
+    debug("access_util: DENIED check_public_access course=%s", course)
     return ACCESS_DENIED
 
 
@@ -248,6 +264,7 @@ def check_data_sharing_consent(course_id):
     )
     if consent_url:
         return DataSharingConsentRequiredAccessError(consent_url=consent_url)
+    debug("access_util: GRANTED check_data_sharing_consent course_id=%s", course_id)
     return ACCESS_GRANTED
 
 
@@ -263,20 +280,24 @@ def check_correct_active_enterprise_customer(user, course_id):
         course_id=course_id, enterprise_customer_user__user_id=user.id
     )
     if not enterprise_enrollments.exists():
+        debug("access_util: GRANTED check_correct_active_enterprise_customer course_id=%s", course_id)
         return ACCESS_GRANTED
 
     try:
         active_enterprise_customer_user = EnterpriseCustomerUser.objects.get(user_id=user.id, active=True)
         if enterprise_enrollments.filter(enterprise_customer_user=active_enterprise_customer_user).exists():
+            debug("access_util: GRANTED check_correct_active_enterprise_customer enterprise_enrollments.filter course_id=%s", course_id)
             return ACCESS_GRANTED
 
         active_enterprise_name = active_enterprise_customer_user.enterprise_customer.name
     except (EnterpriseCustomerUser.DoesNotExist, EnterpriseCustomerUser.MultipleObjectsReturned):
         # Ideally this should not happen. As there should be only 1 active enterprise customer in our system
+        debug("access_util: check_correct_active_enterprise_customer ERROR course_id=%s", course_id)
         log.error("Multiple or No Active Enterprise found for the user %s.", user.id)
         active_enterprise_name = 'Incorrect'
 
     enrollment_enterprise_name = enterprise_enrollments.first().enterprise_customer_user.enterprise_customer.name
+    debug("access_util: check_correct_active_enterprise_customer incorrect access error course_id=%s", course_id)
     return IncorrectActiveEnterpriseAccessError(enrollment_enterprise_name, active_enterprise_name)
 
 
@@ -291,5 +312,7 @@ def is_priority_access_error(access_error):
     ]
     for priority_access_error in priority_access_errors:
         if isinstance(access_error, priority_access_error):
+            debug("access_util: is_priority_access_error=True")
             return True
+        debug("access_util: is_priority_access_error=False")
     return False
